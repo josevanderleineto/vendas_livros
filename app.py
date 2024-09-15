@@ -8,7 +8,7 @@ from streamlit_option_menu import option_menu
 def conectar_banco():
     conn = sqlite3.connect('livros.db')
     return conn
-
+#
 # Criar tabela de livros se não existir
 def criar_tabela():
     conn = conectar_banco()
