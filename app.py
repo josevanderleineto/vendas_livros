@@ -4,51 +4,68 @@ import sqlite3
 import plotly.express as px
 from streamlit_option_menu import option_menu
 
-# Conectar ao banco de dados SQLite
-conn = sqlite3.connect('livros.db')
-cursor = conn.cursor()
+# Função para conectar ao banco de dados SQLite
+def conectar_banco():
+    conn = sqlite3.connect('livros.db')
+    return conn
 
 # Criar tabela de livros se não existir
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS livros (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    titulo TEXT NOT NULL,
-    autor TEXT NOT NULL,
-    preco REAL NOT NULL,
-    data_cadastro TEXT,
-    exemplares INTEGER,
-    data_venda TEXT,
-    quantidade_vendida INTEGER,
-    valor_recebido REAL,
-    local_venda TEXT
-)
-''')
-conn.commit()
+def criar_tabela():
+    conn = conectar_banco()
+    cursor = conn.cursor()
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS livros (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        titulo TEXT NOT NULL,
+        autor TEXT NOT NULL,
+        preco REAL NOT NULL,
+        data_cadastro TEXT,
+        exemplares INTEGER,
+        data_venda TEXT,
+        quantidade_vendida INTEGER,
+        valor_recebido REAL,
+        local_venda TEXT
+    )
+    ''')
+    conn.commit()
+    conn.close()
 
 # Função para adicionar um livro ao banco de dados
 def adicionar_livro(titulo, autor, preco, data_cadastro, exemplares):
+    conn = conectar_banco()
+    cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO livros (titulo, autor, preco, data_cadastro, exemplares) 
         VALUES (?, ?, ?, ?, ?)
     ''', (titulo, autor, preco, data_cadastro, exemplares))
     conn.commit()
+    conn.close()
 
 # Função para registrar uma venda
 def registrar_venda(titulo, data_venda, quantidade_vendida, valor_recebido, local_venda):
+    conn = conectar_banco()
+    cursor = conn.cursor()
     cursor.execute('''
         UPDATE livros SET data_venda = ?, quantidade_vendida = ?, valor_recebido = ?, local_venda = ? 
         WHERE titulo = ?
     ''', (data_venda, quantidade_vendida, valor_recebido, local_venda, titulo))
     conn.commit()
+    conn.close()
 
 # Exibir os livros no banco de dados
 def exibir_livros():
+    conn = conectar_banco()
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM livros")
     livros = cursor.fetchall()
+    conn.close()
     return livros
 
 # Interface Streamlit
 st.title('Dashboard de Vendas de Livros')
+
+# Criar a tabela se não existir
+criar_tabela()
 
 # Menu de navegação
 menu_escolhido = option_menu(
@@ -96,8 +113,10 @@ elif menu_escolhido == "Registrar Venda":
 elif menu_escolhido == "Visualizar Vendas e Gráficos":
     st.header('Visualização de Vendas e Análise')
 
-    # Exibir os dados em uma tabela
-    livros_vendidos = pd.read_sql_query("SELECT * FROM livros", conn)
+    # Exibir os dados em uma tabela (somente os últimos 100 registros)
+    conn = conectar_banco()
+    livros_vendidos = pd.read_sql_query("SELECT * FROM livros ORDER BY data_venda DESC LIMIT 100", conn)
+    conn.close()
     st.dataframe(livros_vendidos)
 
     # Preparar dados para os gráficos
