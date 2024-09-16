@@ -3,12 +3,13 @@ import pandas as pd
 import sqlite3
 import plotly.express as px
 from streamlit_option_menu import option_menu
+import io
 
 # Função para conectar ao banco de dados SQLite
 def conectar_banco():
     conn = sqlite3.connect('livros.db')
     return conn
-#
+
 # Criar tabela de livros se não existir
 def criar_tabela():
     conn = conectar_banco()
@@ -60,6 +61,15 @@ def exibir_livros():
     livros = cursor.fetchall()
     conn.close()
     return livros
+
+# Função para converter DataFrame para Excel
+def to_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Vendas')
+    
+    output.seek(0)  # Volta ao início do BytesIO
+    return output.getvalue()
 
 # Interface Streamlit
 st.title('Dashboard de Vendas de Livros')
@@ -118,6 +128,15 @@ elif menu_escolhido == "Visualizar Vendas e Gráficos":
     livros_vendidos = pd.read_sql_query("SELECT * FROM livros ORDER BY data_venda DESC LIMIT 100", conn)
     conn.close()
     st.dataframe(livros_vendidos)
+
+    # Adicionar a opção de download
+    excel_data = to_excel(livros_vendidos)
+    st.download_button(
+        label="Baixar Excel",
+        data=excel_data,
+        file_name='vendas_livros.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
     # Preparar dados para os gráficos
     if not livros_vendidos.empty:
